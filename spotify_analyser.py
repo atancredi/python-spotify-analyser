@@ -3,7 +3,10 @@ from typing import List
 from dataclasses import dataclass
 
 from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.exceptions import SpotifyException
 from typing import Optional, Any
+from pytubefix import Search, YouTube
+
 
 ###################
 #   DATA MODELS   #
@@ -45,7 +48,7 @@ class SongData:
     album: str
     popularity: float
     track_pop: Any
-    features: Optional[SongFeatures]
+    # features: Optional[SongFeatures]
     duration: Optional[float]
     
     def __init__(self):
@@ -59,18 +62,18 @@ class SongData:
         self.artist_genres = ""
         self.album = ""
         self.track_pop = ""
-        self.features = None
+        # self.features = None
         self.duration = None
 
     def get_reduced(self):
-        minutes, seconds = divmod(self.features.duration_ms / 1000, 60)
+        # minutes, seconds = divmod(self.features.duration_ms / 1000, 60)
         return {
             "position": self.position,
             "name": self.name,
             "artist_name": self.artist_name,
             "album": self.album,
-            "tempo": self.features.tempo,
-            "duration": f'{minutes:0>2.0f}:{seconds:.3f}'
+            # "tempo": self.features.tempo,
+            # "duration": f'{minutes:0>2.0f}:{seconds:.3f}'
         }
 # ENDREGION
 
@@ -146,7 +149,7 @@ def scan_playlist(sp: spotipy.Spotify, playlist_uri: str, reduced = False) -> Li
 
     if sp == None:
         raise ValueError("Must create a Spotify Client")
-
+    
     ################
     song_data = []
     # READ DATA
@@ -161,6 +164,7 @@ def scan_playlist(sp: spotipy.Spotify, playlist_uri: str, reduced = False) -> Li
 
         # Track name
         data_item.name = track["track"]["name"]
+        print("Track:", data_item.name)
 
         # Main Artist
         data_item.artist_uri = track["track"]["artists"][0]["uri"]
@@ -177,19 +181,22 @@ def scan_playlist(sp: spotipy.Spotify, playlist_uri: str, reduced = False) -> Li
         # Popularity of the track
         data_item.track_pop = track["track"]["popularity"]
 
-        features = sp.audio_features(data_item.uri)[0]
-        # Half tempo if over 135BPM
-        if features["tempo"] > 135.0:
-            features["tempo"] = features["tempo"] / 2
+        # try:
+        #     features = sp.audio_features(data_item.uri)[0]
+        #     # Half tempo if over 135BPM
+        #     if features["tempo"] > 135.0:
+        #         features["tempo"] = features["tempo"] / 2
 
-        data_item.features = SongFeatures(**features)
+        #     data_item.features = SongFeatures(**features)
 
-        data_item.duration = divmod(data_item.features.duration_ms / 1000, 60)
+        #     data_item.duration = divmod(data_item.features.duration_ms / 1000, 60)
+        # except SpotifyException as ex:
+        #     print("Spotify error", ex)
 
         if reduced:
             song_data.append(data_item.get_reduced())
         else:
-            song_data.append(data_item)
+            song_data.append(data_item.__dict__)
 
         _cnt += 1
 
@@ -252,7 +259,7 @@ if __name__ == "__main__":
             mkdir("results")
         if not exists(f"results/{args.mode}"):
             mkdir(f"results/{args.mode}")
-        dump(res, open(f"results/{args.mode}/{args.output}", "w"), indent=4)
+        dump(res, open(f"results/{args.mode}/{args.output}.json", "w"), indent=4)
 
         print("Done")
     except Exception as ex:

@@ -1,0 +1,1 @@
+python -m pip install git+https://zotify.xyz/zotify/zotify.git
